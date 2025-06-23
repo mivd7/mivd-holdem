@@ -2,6 +2,7 @@ import { Card, Player, Turn } from "@/types";
 import PokerGame, { DEFAULT_BIG_BLIND } from "./poker-game";
 import { v4 as uuidv4 } from 'uuid';
 import { shiftArrayUp } from "./helpers";
+import { decideWinner } from "./game-logic";
 
 export default class Round extends PokerGame {
     deck: Card[];
@@ -11,7 +12,7 @@ export default class Round extends PokerGame {
     communityCards: Card[];
     hasFinished: boolean;
     turn?: Turn;
-    winner?: Player;
+    winners?: Player[];
 
     constructor(cards: Card[], activePlayers: Player[], bigBlind?: number) {
         super(activePlayers, );
@@ -72,16 +73,9 @@ export default class Round extends PokerGame {
     }
 
     nextTurn() {
-        if(this.activePlayers.length === 1) {
-            // round finished
-            this.winner = this.activePlayers[0];
-            this.hasFinished = true;
-            this.startNewRound();
-        } else {
-            this.drawCommunityCards(1);
-            this.rotatePlayerRoles();
-            this.assignTurn(this.getNextPlayer())
-        }
+        this.drawCommunityCards(1);
+        this.rotatePlayerRoles();
+        this.assignTurn(this.getNextPlayer())
     }
 
     placeMandatoryBets() {
@@ -135,6 +129,15 @@ export default class Round extends PokerGame {
         });
     }
 
+    updatePlayer(player: Player) {
+            // updates the players in PokerGame class after player exited round
+            const foundPlayerIndex = this.players.findIndex(player => player.id === player.id);
+            if(foundPlayerIndex === -1) {
+                throw new Error('error updating player wallet: Player ' + player.id + ' was not found')
+            }
+            this.players[foundPlayerIndex] = player;
+        }
+
     bet(amount: number) {     
         if(amount < this.bigBlind) {
             throw new Error('betting amount too low')
@@ -149,6 +152,19 @@ export default class Round extends PokerGame {
         this.ante = this.ante + amount
         this.activePlayers = shiftArrayUp([...this.activePlayers]);
     }
+    
+    fold = (player: Player) => {
+        this.updatePlayer(player)
+        this.activePlayers = this.activePlayers.filter(p => p.id !== player.id)
+    }
 
-    fold = (player: Player) => this.activePlayers = this.activePlayers.filter(p => p.id !== player.id)
+    end() {
+        if(this.activePlayers.length === 1) {
+            // only one player left in the round
+            this.winners = this.activePlayers
+            this.winners.forEach(winner => this.updatePlayer(winner))
+        } else {
+            this.winners = decideWinner(this.activePlayers, this.communityCards)
+        }
+    }
 }
