@@ -11,6 +11,7 @@ export default class PokerGame extends Deck {
     pot: number;
     bigBlind: number;
     currentRound?: Round | null;
+    bustedPlayers: Player[];
 
     constructor(players: Player[], bigBlind?: number) {
         super();
@@ -18,25 +19,24 @@ export default class PokerGame extends Deck {
         this.isFinished = false;
         this.pot = 0;
         this.bigBlind = bigBlind ?? DEFAULT_BIG_BLIND;
-    }
-
-    get currentPlayers() {
-        return this.players;
+        this.bustedPlayers = [];
     }
 
     newGame() {
         this.setPlayerRoles(this.players);
-        this.shuffle();
         this.players = this.players.map(this.dealCards);
-        this.startRound();
+        this.startNewRound();
     }
 
-    startRound() {   
+    startNewRound() {   
         this.reset();     
-        this.currentRound = new Round(this.cards, this.players, )
+        this.currentRound = new Round(this.cards, this.players)
     }
 
-    findNextPlayerIndex = (players: Player[]) => players.findIndex(player => player.hasTurn) + 1
+    bust(player: Player) {
+        this.bustedPlayers = [...this.bustedPlayers, player];
+        this.players = this.players.filter(player => player.id)
+    }
 
     dealCards(player: Player) {
         const copyPlayer = {...player}

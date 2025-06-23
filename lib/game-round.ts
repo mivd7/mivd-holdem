@@ -71,6 +71,19 @@ export default class Round extends PokerGame {
         }
     }
 
+    nextTurn() {
+        if(this.activePlayers.length === 1) {
+            // round finished
+            this.winner = this.activePlayers[0];
+            this.hasFinished = true;
+            this.startNewRound();
+        } else {
+            this.drawCommunityCards(1);
+            this.rotatePlayerRoles();
+            this.assignTurn(this.getNextPlayer())
+        }
+    }
+
     placeMandatoryBets() {
         const smallBlindIndex = this.activePlayers.findIndex(player => player.role === 'small-blind' || player.role === 'dealer');
         const bigBlindIndex = this.activePlayers.findIndex(player => player.role === 'big-blind');
@@ -137,26 +150,5 @@ export default class Round extends PokerGame {
         this.activePlayers = shiftArrayUp([...this.activePlayers]);
     }
 
-    nextTurn() {
-        if(this.activePlayers.length === 1) {
-            // round finished
-            this.winner = this.activePlayers[0];
-            this.hasFinished = true;
-            this.reset();
-        } else {
-            this.drawCommunityCards(1);
-            this.rotatePlayerRoles();
-            this.assignTurn(this.getNextPlayer())
-        }
-    }
-
-    fold = (player: Player) => {
-        if(!this.currentRound) {
-            throw new Error('Cannot fold. No round in progress')
-        }
-
-        // const foldedPlayer = this.currentRound.activePlayers.find(p => p.id === player.id);
-        // updatePlayerFunds
-        this.activePlayers = this.activePlayers.filter(p => p.id !== player.id)
-    }
+    fold = (player: Player) => this.activePlayers = this.activePlayers.filter(p => p.id !== player.id)
 }
