@@ -162,7 +162,7 @@ export default class Round extends PokerGame {
         if(this.activePlayers.length === 1) {
             // only one player left in the round
             this.winners = this.activePlayers
-            this.winners.forEach(winner => this.updatePlayer(winner))
+            this.updatePlayer(this.activePlayers[0])
         } else {
             this.winners = decideWinner(this.activePlayers, this.communityCards)
         }
