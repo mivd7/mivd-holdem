@@ -7,30 +7,38 @@ export const DEFAULT_BIG_BLIND = 10;
 
 export default class PokerGame extends Deck {
     players: Player[];
-    isFinished: boolean;
     pot: number;
     bigBlind: number;
-    currentRound?: Round | null;
     bustedPlayers: Player[];
+    currentRound: Round | Record<string, unknown>;
 
-    constructor(players: Player[], bigBlind?: number) {
+    constructor() {
         super();
-        this.players = players
-        this.isFinished = false;
+        this.players = [];
+        this.bigBlind = DEFAULT_BIG_BLIND;
         this.pot = 0;
-        this.bigBlind = bigBlind ?? DEFAULT_BIG_BLIND;
+        this.currentRound = {};
         this.bustedPlayers = [];
     }
 
-    newGame() {
-        this.setPlayerRoles(this.players);
-        this.players = this.players.map(this.dealCards);
-        this.startNewRound();
+    get round() {
+        return this.currentRound;
     }
 
-    startNewRound() {   
-        this.reset();     
-        this.currentRound = new Round(this.cards, this.players)
+    init(players: Player[], bigBlind?: number) {
+        if(players) this.players = players;
+        if(bigBlind) this.bigBlind = bigBlind;
+        this.newGame();
+    }
+
+    newGame() {
+        this.currentRound = new Round()
+        this.setPlayerRoles()
+        this.currentRound.init(this.players, this.bigBlind)
+    }
+
+    setCurrentRound(round: Round) {
+        this.currentRound = round;
     }
 
     bust(player: Player) {
@@ -38,22 +46,12 @@ export default class PokerGame extends Deck {
         this.players = this.players.filter(player => player.id)
     }
 
-    dealCards(player: Player) {
-        const copyPlayer = {...player}
-        for(let i = 0; i < 2; i++) {
-            const [newCard] = this.draw(1);
-            copyPlayer.cards = [...copyPlayer.cards, newCard]
-        }
-        return copyPlayer;
-    }
-
-    setPlayerRoles(players: Player[]) {
-        const playerAmount = players.length;
-        if(playerAmount === 1) {
+    setPlayerRoles() {
+        const playerAmount = this.players.length;
+        if(playerAmount <= 1) {
             throw new Error('Need at least two players to play!')
         }
-        const copyPlayers = [...players].map(this.mapPlayerRoles)
-        this.players = copyPlayers;
+        this.players = this.players.map(this.mapPlayerRoles)
     }
 
     mapPlayerRoles = (player: Player, index: number) => {

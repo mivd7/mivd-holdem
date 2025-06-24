@@ -1,48 +1,56 @@
 import { Card, Player, Turn } from "@/types";
-import PokerGame, { DEFAULT_BIG_BLIND } from "./poker-game";
+import { DEFAULT_BIG_BLIND } from "./poker-game";
 import { v4 as uuidv4 } from 'uuid';
 import { shiftArrayUp } from "./helpers";
 import { decideWinner } from "./game-logic";
+import { Deck } from "./deck";
 
-export default class Round extends PokerGame {
-    deck: Card[];
-    activePlayers: Player[];
+export default class Round extends Deck {
+    players: Player[];
     bigBlind: number;    
-    ante: number;
+    pot: number;
     communityCards: Card[];
-    hasFinished: boolean;
     turn?: Turn;
     winners?: Player[];
+    deck?: Deck;
 
-    constructor(cards: Card[], activePlayers: Player[], bigBlind?: number) {
-        super(activePlayers, );
-        this.deck = cards;
-        this.activePlayers = activePlayers;
+    constructor() {
+        super()
+        this.players = [];
         this.communityCards = [];
-        this.bigBlind = bigBlind ?? DEFAULT_BIG_BLIND;
-        this.hasFinished = false;
-        this.ante = 0;
-        this.initRound();
+        this.bigBlind = DEFAULT_BIG_BLIND;
+        this.pot = 0;
+        this.deck = new Deck();
     }
 
-    initRound() {
+    init(players: Player[], bigBlind?: number) {
+        if(players) this.players = players;
+        if(bigBlind) this.bigBlind = bigBlind;
         this.placeMandatoryBets();
-        this.drawCommunityCards(3)
+
+        this.drawCommunityCards(3);
         this.turn = this.assignTurn(this.getNextPlayer());
+    }
+
+    findPlayerIndex(id: string) { this.players.findIndex(p => p.id === id) }
+
+    dealCardToPlayer(playerId: Player['id'], amount: number) {
+        const playerIndex = this.players.findIndex(player => player.id === playerId);
+        const [newCard] = this.draw(amount);
+        if(playerIndex === -1) { throw new Error()};
+        this.players[playerIndex].hand = [...this.players[playerIndex].hand as Card[], newCard]
     }
 
     drawCommunityCards(amount: number) {
         const drawnCards = this.draw(amount)
         drawnCards.forEach((card) => {
             this.communityCards = [...this.communityCards, card]
-            this.removeCard(card.id)
+            this.removeCard(card.code)
         })
-        
-        this.deck = this.cards;
     };
 
     getNextPlayer(): Player {
-        const players = this.activePlayers;
+        const players = this.players;
         let startIndex = players.findIndex(p => p.hasTurn);
         if (startIndex === -1) {
             startIndex = players.findIndex(p => p.role === 'small-blind');
@@ -79,29 +87,28 @@ export default class Round extends PokerGame {
     }
 
     placeMandatoryBets() {
-        const smallBlindIndex = this.activePlayers.findIndex(player => player.role === 'small-blind' || player.role === 'dealer');
-        const bigBlindIndex = this.activePlayers.findIndex(player => player.role === 'big-blind');
+        const smallBlindIndex = this.players.findIndex(player => player.role === 'small-blind' || player.role === 'dealer');
+        const bigBlindIndex = this.players.findIndex(player => player.role === 'big-blind');
         const smallBlindBet = this.bigBlind / 2;
 
-        this.activePlayers[smallBlindIndex] = {
-            ...this.activePlayers[smallBlindIndex],
+        this.players[smallBlindIndex] = {
+            ...this.players[smallBlindIndex],
             bet: smallBlindBet,
-            wallet: this.activePlayers[smallBlindIndex].wallet - smallBlindBet,
+            wallet: this.players[smallBlindIndex].wallet - smallBlindBet,
         }
 
-        this.activePlayers[bigBlindIndex] = {
-            ...this.activePlayers[smallBlindIndex],
+        this.players[bigBlindIndex] = {
+            ...this.players[smallBlindIndex],
             bet: this.bigBlind,
-            wallet: this.activePlayers[smallBlindIndex].wallet - this.bigBlind
+            wallet: this.players[smallBlindIndex].wallet - this.bigBlind
         }
 
         const totalBet = smallBlindBet + this.bigBlind
         this.pot = this.pot + totalBet;
-        this.ante = this.ante + totalBet;
     }
 
     rotatePlayerRoles() {
-        const players = this.activePlayers;
+        const players = this.players;
         const dealerIndex = players.findIndex(p => p.role === 'dealer');
         const smallBlindIndex = players.findIndex(p => p.role === 'small-blind');
         const bigBlindIndex = players.findIndex(p => p.role === 'big-blind');
@@ -113,7 +120,7 @@ export default class Round extends PokerGame {
         }
 
         // Create a new array with updated roles
-       this.activePlayers = players.map((player, index) => {
+       this.players = players.map((player, index) => {
             switch (index) {
                 case dealerIndex:
                     return { ...player, role: 'regular' };
@@ -149,22 +156,21 @@ export default class Round extends PokerGame {
 
         this.turn.player.bet = amount;
         this.pot = this.pot + amount;
-        this.ante = this.ante + amount
-        this.activePlayers = shiftArrayUp([...this.activePlayers]);
+        this.players = shiftArrayUp([...this.players]);
     }
     
     fold = (player: Player) => {
         this.updatePlayer(player)
-        this.activePlayers = this.activePlayers.filter(p => p.id !== player.id)
+        this.players = this.players.filter(p => p.id !== player.id)
     }
 
     end() {
-        if(this.activePlayers.length === 1) {
+        if(this.players.length === 1) {
             // only one player left in the round
-            this.winners = this.activePlayers
-            this.updatePlayer(this.activePlayers[0])
+            this.winners = this.players
+            this.updatePlayer(this.players[0])
         } else {
-            this.winners = decideWinner(this.activePlayers, this.communityCards)
+            this.winners = decideWinner(this.players, this.communityCards)
         }
     }
 }

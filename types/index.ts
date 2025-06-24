@@ -3,20 +3,21 @@ export type CardColors = 'hearts' | 'diamonds' | 'clovers' | 'spades';
 export type Player = {
     id: string;
     name: string;
-    cards: Card[];
-    role: PlayerRole;
+    hand?: Card[];
+    role?: PlayerRole;
     bet?: number;
     wallet: number;
-    hasTurn: boolean;
+    hasTurn?: boolean;
 }
 
 export type Suit = 'hearts' | 'diamonds' | 'clubs' | 'spades';
 export type Value = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K';
 
 export interface Card {
-  id: string;
+  code: string;
   suit: Suit;
   value: Value;
+  image?: string;
 }
 
 export type PlayerRole = 'dealer' | 'small-blind' | 'big-blind' | 'regular'
@@ -32,4 +33,15 @@ export type Turn = {
   id: string;
   player: Player;
   bet: number;
+}
+
+export type PokerGame = {
+  deck: Card[];
+  activePlayers: Player[];
+  bigBlind: number;    
+  ante: number;
+  communityCards: Card[];
+  hasFinished: boolean;
+  turn?: Turn;
+  winners?: Player[];
 }

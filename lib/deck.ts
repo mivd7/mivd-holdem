@@ -1,20 +1,23 @@
 import { Card, Suit, Value } from "@/types";
 
 export class Deck {
-  cards: Card[] = [];
+  cards: Card[];
+  suits: Suit[];
+  values: Value[];
 
   constructor() {
-    this.reset();
+    this.cards = [];
+    this.suits = ['hearts', 'diamonds', 'clubs', 'spades'];
+    this.values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    this.#init();
   }
 
-  reset() {
-    const suits: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
-    const values: Value[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  #init() {
     this.cards = [];
-    for (const suit of suits) {
-      for (const value of values) {
-        this.cards.push({ 
-          id: `${suit}-${value}`, 
+    for (const suit of this.suits) {
+      for (const value of this.values) {
+        this.cards.push({
+          code: `${suit}-${value}`,
           suit, 
           value 
         });
@@ -22,8 +25,8 @@ export class Deck {
     }
   }
 
-  removeCard(cardId: Card['id']) {
-    this.cards = this.cards.filter(card => card.id !== cardId)
+  removeCard(cardCode: string) {
+    this.cards = this.cards.filter(card => card.code !== cardCode)
   }
 
   shuffle() {
@@ -33,9 +36,10 @@ export class Deck {
     }
   }
 
-  drawAndRemove(count: number, cardId: Card['id']) {
-    this.draw(count);
-    this.removeCard(cardId)
+  drawAndRemove(count: number) {
+    const drawn = this.draw(count);
+    drawn.forEach(card => this.removeCard(card.code))
+
   }
 
   draw(count: number): Card[] {
