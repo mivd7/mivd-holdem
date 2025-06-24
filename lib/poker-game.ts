@@ -1,4 +1,4 @@
-import { Player, PlayerRole } from "@/types";
+import { Player, PlayerRole } from "@/types/generated/graphql";
 import { Deck } from "./deck";
 import Round from "./game-round";
 
@@ -10,14 +10,13 @@ export default class PokerGame extends Deck {
     pot: number;
     bigBlind: number;
     bustedPlayers: Player[];
-    currentRound: Round | Record<string, unknown>;
+    currentRound?: Round;
 
     constructor() {
         super();
         this.players = [];
         this.bigBlind = DEFAULT_BIG_BLIND;
         this.pot = 0;
-        this.currentRound = {};
         this.bustedPlayers = [];
     }
 
@@ -64,13 +63,13 @@ export default class PokerGame extends Deck {
     assignRole(index: number): PlayerRole {
         switch (index) {
             case 0:
-                return 'dealer'
+                return PlayerRole.Dealer
             case 1:
-                return 'small-blind'
+                return PlayerRole.SmallBlind
             case 2:
-                return 'big-blind'    
+                return PlayerRole.BigBlind    
             default:
-                return 'regular'
+                return PlayerRole.Regular
         }
     }
 }

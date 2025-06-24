@@ -1,9 +1,9 @@
-import { Card, Player, Turn } from "@/types";
 import { DEFAULT_BIG_BLIND } from "./poker-game";
 import { v4 as uuidv4 } from 'uuid';
 import { shiftArrayUp } from "./helpers";
 import { decideWinner } from "./game-logic";
 import { Deck } from "./deck";
+import { Player, Card, Turn, PlayerRole } from "@/types/generated/graphql";
 
 export default class Round extends Deck {
     players: Player[];
@@ -12,7 +12,6 @@ export default class Round extends Deck {
     communityCards: Card[];
     turn?: Turn;
     winners?: Player[];
-    deck?: Deck;
 
     constructor() {
         super()
@@ -20,15 +19,13 @@ export default class Round extends Deck {
         this.communityCards = [];
         this.bigBlind = DEFAULT_BIG_BLIND;
         this.pot = 0;
-        this.deck = new Deck();
     }
 
     init(players: Player[], bigBlind?: number) {
         if(players) this.players = players;
         if(bigBlind) this.bigBlind = bigBlind;
-        this.placeMandatoryBets();
-
-        this.drawCommunityCards(3);
+        this.initDeck();
+        this.shuffle();
         this.turn = this.assignTurn(this.getNextPlayer());
     }
 
@@ -53,10 +50,10 @@ export default class Round extends Deck {
         const players = this.players;
         let startIndex = players.findIndex(p => p.hasTurn);
         if (startIndex === -1) {
-            startIndex = players.findIndex(p => p.role === 'small-blind');
+            startIndex = players.findIndex(p => p.role === 'small_blind');
         }
         if (startIndex === -1) {
-            startIndex = players.findIndex(p => p.role === 'dealer');
+            startIndex = players.findIndex(p => p.role ===  PlayerRole.Dealer);
         }
         // The next player is the one after the reference
         const nextIndex = (startIndex + 1) % players.length;
@@ -86,36 +83,15 @@ export default class Round extends Deck {
         this.assignTurn(this.getNextPlayer())
     }
 
-    placeMandatoryBets() {
-        const smallBlindIndex = this.players.findIndex(player => player.role === 'small-blind' || player.role === 'dealer');
-        const bigBlindIndex = this.players.findIndex(player => player.role === 'big-blind');
-        const smallBlindBet = this.bigBlind / 2;
-
-        this.players[smallBlindIndex] = {
-            ...this.players[smallBlindIndex],
-            bet: smallBlindBet,
-            wallet: this.players[smallBlindIndex].wallet - smallBlindBet,
-        }
-
-        this.players[bigBlindIndex] = {
-            ...this.players[smallBlindIndex],
-            bet: this.bigBlind,
-            wallet: this.players[smallBlindIndex].wallet - this.bigBlind
-        }
-
-        const totalBet = smallBlindBet + this.bigBlind
-        this.pot = this.pot + totalBet;
-    }
-
     rotatePlayerRoles() {
         const players = this.players;
-        const dealerIndex = players.findIndex(p => p.role === 'dealer');
-        const smallBlindIndex = players.findIndex(p => p.role === 'small-blind');
-        const bigBlindIndex = players.findIndex(p => p.role === 'big-blind');
+        const dealerIndex = players.findIndex(p => p.role === PlayerRole.Dealer);
+        const smallBlindIndex = players.findIndex(p => p.role === PlayerRole.SmallBlind);
+        const bigBlindIndex = players.findIndex(p => p.role === PlayerRole.BigBlind);
 
         // Find the next regular after big-blind (wrap around)
         let nextBigBlindIndex = (bigBlindIndex + 1) % players.length;
-        while (players[nextBigBlindIndex].role !== 'regular' && nextBigBlindIndex !== bigBlindIndex) {
+        while (players[nextBigBlindIndex].role !== PlayerRole.Regular && nextBigBlindIndex !== bigBlindIndex) {
             nextBigBlindIndex = (nextBigBlindIndex + 1) % players.length;
         }
 
@@ -123,13 +99,13 @@ export default class Round extends Deck {
        this.players = players.map((player, index) => {
             switch (index) {
                 case dealerIndex:
-                    return { ...player, role: 'regular' };
+                    return { ...player, role: PlayerRole.Regular };
                 case smallBlindIndex:
-                    return { ...player, role: 'dealer' };
+                    return { ...player, role: PlayerRole.Dealer };
                 case bigBlindIndex:
-                    return { ...player, role: 'small-blind' };
+                    return { ...player, role: PlayerRole.SmallBlind };
                 case nextBigBlindIndex:
-                    return { ...player, role: 'big-blind' };
+                    return { ...player, role: PlayerRole.BigBlind };
                 default:
                     return player;
             }

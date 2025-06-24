@@ -1,5 +1,6 @@
+import { Card, Player } from '@/types/generated/graphql';
 import { Hand } from 'pokersolver';
-import type { Player, Card } from '../types';
+
 
 function toSolverCard(card: Card): string {
   // Convert to format like 'As' (Ace of spades), 'Td' (Ten of diamonds), etc.
@@ -12,7 +13,7 @@ function toSolverCard(card: Card): string {
 
 export function decideWinner(players: Player[], communityCards: Card[]) {
   const hands = players.map(player => {
-    const allCards = [...player.cards, ...communityCards].map(toSolverCard);
+    const allCards = [...player.hand, ...communityCards].map(toSolverCard);
     const hand = Hand.solve(allCards);
     return { player, hand };
   });

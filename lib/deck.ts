@@ -1,4 +1,6 @@
-import { Card, Suit, Value } from "@/types";
+import { Card } from "@/types/generated/graphql";
+export type Suit = 'hearts' | 'diamonds' | 'clubs' | 'spades';
+export type Value = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K';
 
 export class Deck {
   cards: Card[];
@@ -9,10 +11,9 @@ export class Deck {
     this.cards = [];
     this.suits = ['hearts', 'diamonds', 'clubs', 'spades'];
     this.values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    this.#init();
   }
 
-  #init() {
+  initDeck() {
     this.cards = [];
     for (const suit of this.suits) {
       for (const value of this.values) {
