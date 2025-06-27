@@ -12,5 +12,5 @@ mutation NewGame($players: [PlayerInput!]!) {
               turn { id player { id name } bet }
               winners { id name wallet }
             }
-          }
         }
+}

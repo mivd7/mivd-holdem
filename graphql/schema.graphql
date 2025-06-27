@@ -64,6 +64,8 @@
 
   type Query {
     newDeck: [Card!]!
+    players: [Player!]!
+    player(id: ID!): Player
   }
 
   type Mutation {

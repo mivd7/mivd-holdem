@@ -7,6 +7,10 @@ generates:
       - typescript-operations
       - typescript-react-query
     config:
-      fetcher: graphql-request
+      fetcher:
+        func: '../../lib/fetcher#customFetcher'
+        isReactHook: false
+        isAsync: true
       exposeQueryKeys: true
       exposeMutationKeys: true
+      reactQueryVersion: 5

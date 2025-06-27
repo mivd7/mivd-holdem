@@ -1,4 +1,5 @@
-import { useMutation, UseMutationOptions } from '@tanstack/react-query';
+import { useMutation, useQuery, UseMutationOptions, UseQueryOptions } from '@tanstack/react-query';
+import { customFetcher } from '../../lib/fetcher';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
@@ -6,26 +7,6 @@ export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: 
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
 export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
-
-function fetcher<TData, TVariables>(endpoint: string, requestInit: RequestInit, query: string, variables?: TVariables) {
-  return async (): Promise<TData> => {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      ...requestInit,
-      body: JSON.stringify({ query, variables }),
-    });
-
-    const json = await res.json();
-
-    if (json.errors) {
-      const { message } = json.errors[0];
-
-      throw new Error(message);
-    }
-
-    return json.data;
-  }
-}
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: { input: string; output: string; }
@@ -107,6 +88,13 @@ export type PokerGame = {
 export type Query = {
   __typename?: 'Query';
   newDeck: Array<Card>;
+  player?: Maybe<Player>;
+  players: Array<Player>;
+};
+
+
+export type QueryPlayerArgs = {
+  id: Scalars['ID']['input'];
 };
 
 export type Round = {
@@ -132,6 +120,18 @@ export type NewGameMutationVariables = Exact<{
 
 
 export type NewGameMutation = { __typename?: 'Mutation', newGame: { __typename?: 'PokerGame', pot: number, bigBlind: number, players: Array<{ __typename?: 'Player', id: string, name: string, wallet: number }>, bustedPlayers: Array<{ __typename?: 'Player', id: string, name: string, wallet: number }>, currentRound?: { __typename?: 'Round', bigBlind: number, pot: number, players: Array<{ __typename?: 'Player', id: string, name: string, wallet: number, role?: PlayerRole | null, bet?: number | null, hasTurn?: boolean | null, hand: Array<{ __typename?: 'Card', suit: string, value: string, code: string, image?: string | null }> }>, communityCards: Array<{ __typename?: 'Card', suit: string, value: string, code: string, image?: string | null }>, turn?: { __typename?: 'Turn', id: string, bet: number, player: { __typename?: 'Player', id: string, name: string } } | null, winners?: Array<{ __typename?: 'Player', id: string, name: string, wallet: number }> | null } | null } };
+
+export type PlayersQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type PlayersQuery = { __typename?: 'Query', players: Array<{ __typename?: 'Player', id: string, name: string }> };
+
+export type PlayerQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type PlayerQuery = { __typename?: 'Query', players: Array<{ __typename?: 'Player', id: string, name: string, role?: PlayerRole | null, bet?: number | null, wallet: number, hasTurn?: boolean | null, hand: Array<{ __typename?: 'Card', suit: string, value: string, code: string, image?: string | null }> }> };
 
 
 
@@ -194,15 +194,78 @@ export const NewGameDocument = `
 export const useNewGameMutation = <
       TError = unknown,
       TContext = unknown
-    >(
-      dataSource: { endpoint: string, fetchParams?: RequestInit },
-      options?: UseMutationOptions<NewGameMutation, TError, NewGameMutationVariables, TContext>
-    ) => {
+    >(options?: UseMutationOptions<NewGameMutation, TError, NewGameMutationVariables, TContext>) => {
     
     return useMutation<NewGameMutation, TError, NewGameMutationVariables, TContext>(
-      ['NewGame'],
-      (variables?: NewGameMutationVariables) => fetcher<NewGameMutation, NewGameMutationVariables>(dataSource.endpoint, dataSource.fetchParams || {}, NewGameDocument, variables)(),
-      options
+      {
+    mutationKey: ['NewGame'],
+    mutationFn: (variables?: NewGameMutationVariables) => customFetcher<NewGameMutation, NewGameMutationVariables>(NewGameDocument, variables)(),
+    ...options
+  }
     )};
 
 useNewGameMutation.getKey = () => ['NewGame'];
+
+export const PlayersDocument = `
+    query Players {
+  players {
+    id
+    name
+  }
+}
+    `;
+
+export const usePlayersQuery = <
+      TData = PlayersQuery,
+      TError = unknown
+    >(
+      variables?: PlayersQueryVariables,
+      options?: Omit<UseQueryOptions<PlayersQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<PlayersQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useQuery<PlayersQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['Players'] : ['Players', variables],
+    queryFn: customFetcher<PlayersQuery, PlayersQueryVariables>(PlayersDocument, variables),
+    ...options
+  }
+    )};
+
+usePlayersQuery.getKey = (variables?: PlayersQueryVariables) => variables === undefined ? ['Players'] : ['Players', variables];
+
+export const PlayerDocument = `
+    query Player($id: ID!) {
+  players {
+    id
+    name
+    hand {
+      suit
+      value
+      code
+      image
+    }
+    role
+    bet
+    wallet
+    hasTurn
+  }
+}
+    `;
+
+export const usePlayerQuery = <
+      TData = PlayerQuery,
+      TError = unknown
+    >(
+      variables: PlayerQueryVariables,
+      options?: Omit<UseQueryOptions<PlayerQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<PlayerQuery, TError, TData>['queryKey'] }
+    ) => {
+    
+    return useQuery<PlayerQuery, TError, TData>(
+      {
+    queryKey: ['Player', variables],
+    queryFn: customFetcher<PlayerQuery, PlayerQueryVariables>(PlayerDocument, variables),
+    ...options
+  }
+    )};
+
+usePlayerQuery.getKey = (variables: PlayerQueryVariables) => ['Player', variables];
