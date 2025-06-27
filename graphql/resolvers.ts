@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Deck } from "@/lib/deck";
 import PokerGame from "@/lib/poker-game";
-import { Card, MutationNewGameArgs, RequireFields, Resolvers } from "@/types/generated/graphql";
+import { Card, MutationNewGameArgs } from "@/types/generated/graphql";
 
 let deck = new Deck();
 deck.shuffle();
@@ -9,9 +9,9 @@ deck.shuffle();
 const game: PokerGame = new PokerGame(); 
 
 type DrawCardArgs = { count: number };
-type NewGameArgs = RequireFields<MutationNewGameArgs, "players">;
+// type NewGameArgs = RequireFields<MutationNewGameArgs, "players">;
 
-export const resolvers: Resolvers = {
+export const resolvers = {
   Query: {
     newDeck: (): Card[] => {
       deck = new Deck();
@@ -25,7 +25,7 @@ export const resolvers: Resolvers = {
       const drawn = deck.draw(count);
       return drawn.map(formatCard);
     },
-    newGame: (_: any, {players, bigBlind}: NewGameArgs): PokerGame => {
+    newGame: (_: any, {players, bigBlind}: MutationNewGameArgs): PokerGame => {
       game.init(players, bigBlind ?? undefined);
       return game;
     }

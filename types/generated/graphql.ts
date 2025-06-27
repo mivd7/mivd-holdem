@@ -1,4 +1,4 @@
-import { GraphQLResolveInfo } from 'graphql';
+import { useMutation, UseMutationOptions } from '@tanstack/react-query';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
@@ -6,7 +6,26 @@ export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: 
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
 export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
-export type RequireFields<T, K extends keyof T> = Omit<T, K> & { [P in K]-?: NonNullable<T[P]> };
+
+function fetcher<TData, TVariables>(endpoint: string, requestInit: RequestInit, query: string, variables?: TVariables) {
+  return async (): Promise<TData> => {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      ...requestInit,
+      body: JSON.stringify({ query, variables }),
+    });
+
+    const json = await res.json();
+
+    if (json.errors) {
+      const { message } = json.errors[0];
+
+      throw new Error(message);
+    }
+
+    return json.data;
+  }
+}
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: { input: string; output: string; }
@@ -61,11 +80,11 @@ export type Player = {
 
 export type PlayerInput = {
   bet?: InputMaybe<Scalars['Int']['input']>;
-  hand: Array<Card>;
+  hand: Array<CardInput>;
   hasTurn?: InputMaybe<Scalars['Boolean']['input']>;
   id: Scalars['ID']['input'];
   name: Scalars['String']['input'];
-  role: PlayerRole;
+  role?: InputMaybe<PlayerRole>;
   wallet: Scalars['Int']['input'];
 };
 
@@ -107,171 +126,83 @@ export type Turn = {
   player: Player;
 };
 
+export type NewGameMutationVariables = Exact<{
+  players: Array<PlayerInput> | PlayerInput;
+}>;
 
 
-export type ResolverTypeWrapper<T> = Promise<T> | T;
+export type NewGameMutation = { __typename?: 'Mutation', newGame: { __typename?: 'PokerGame', pot: number, bigBlind: number, players: Array<{ __typename?: 'Player', id: string, name: string, wallet: number }>, bustedPlayers: Array<{ __typename?: 'Player', id: string, name: string, wallet: number }>, currentRound?: { __typename?: 'Round', bigBlind: number, pot: number, players: Array<{ __typename?: 'Player', id: string, name: string, wallet: number, role?: PlayerRole | null, bet?: number | null, hasTurn?: boolean | null, hand: Array<{ __typename?: 'Card', suit: string, value: string, code: string, image?: string | null }> }>, communityCards: Array<{ __typename?: 'Card', suit: string, value: string, code: string, image?: string | null }>, turn?: { __typename?: 'Turn', id: string, bet: number, player: { __typename?: 'Player', id: string, name: string } } | null, winners?: Array<{ __typename?: 'Player', id: string, name: string, wallet: number }> | null } | null } };
 
 
-export type ResolverWithResolve<TResult, TParent, TContext, TArgs> = {
-  resolve: ResolverFn<TResult, TParent, TContext, TArgs>;
-};
-export type Resolver<TResult, TParent = {}, TContext = {}, TArgs = {}> = ResolverFn<TResult, TParent, TContext, TArgs> | ResolverWithResolve<TResult, TParent, TContext, TArgs>;
 
-export type ResolverFn<TResult, TParent, TContext, TArgs> = (
-  parent: TParent,
-  args: TArgs,
-  context: TContext,
-  info: GraphQLResolveInfo
-) => Promise<TResult> | TResult;
-
-export type SubscriptionSubscribeFn<TResult, TParent, TContext, TArgs> = (
-  parent: TParent,
-  args: TArgs,
-  context: TContext,
-  info: GraphQLResolveInfo
-) => AsyncIterable<TResult> | Promise<AsyncIterable<TResult>>;
-
-export type SubscriptionResolveFn<TResult, TParent, TContext, TArgs> = (
-  parent: TParent,
-  args: TArgs,
-  context: TContext,
-  info: GraphQLResolveInfo
-) => TResult | Promise<TResult>;
-
-export interface SubscriptionSubscriberObject<TResult, TKey extends string, TParent, TContext, TArgs> {
-  subscribe: SubscriptionSubscribeFn<{ [key in TKey]: TResult }, TParent, TContext, TArgs>;
-  resolve?: SubscriptionResolveFn<TResult, { [key in TKey]: TResult }, TContext, TArgs>;
+export const NewGameDocument = `
+    mutation NewGame($players: [PlayerInput!]!) {
+  newGame(players: $players) {
+    players {
+      id
+      name
+      wallet
+    }
+    pot
+    bigBlind
+    bustedPlayers {
+      id
+      name
+      wallet
+    }
+    currentRound {
+      players {
+        id
+        name
+        wallet
+        hand {
+          suit
+          value
+          code
+          image
+        }
+        role
+        bet
+        hasTurn
+      }
+      bigBlind
+      pot
+      communityCards {
+        suit
+        value
+        code
+        image
+      }
+      turn {
+        id
+        player {
+          id
+          name
+        }
+        bet
+      }
+      winners {
+        id
+        name
+        wallet
+      }
+    }
+  }
 }
+    `;
 
-export interface SubscriptionResolverObject<TResult, TParent, TContext, TArgs> {
-  subscribe: SubscriptionSubscribeFn<any, TParent, TContext, TArgs>;
-  resolve: SubscriptionResolveFn<TResult, any, TContext, TArgs>;
-}
+export const useNewGameMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      dataSource: { endpoint: string, fetchParams?: RequestInit },
+      options?: UseMutationOptions<NewGameMutation, TError, NewGameMutationVariables, TContext>
+    ) => {
+    
+    return useMutation<NewGameMutation, TError, NewGameMutationVariables, TContext>(
+      ['NewGame'],
+      (variables?: NewGameMutationVariables) => fetcher<NewGameMutation, NewGameMutationVariables>(dataSource.endpoint, dataSource.fetchParams || {}, NewGameDocument, variables)(),
+      options
+    )};
 
-export type SubscriptionObject<TResult, TKey extends string, TParent, TContext, TArgs> =
-  | SubscriptionSubscriberObject<TResult, TKey, TParent, TContext, TArgs>
-  | SubscriptionResolverObject<TResult, TParent, TContext, TArgs>;
-
-export type SubscriptionResolver<TResult, TKey extends string, TParent = {}, TContext = {}, TArgs = {}> =
-  | ((...args: any[]) => SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>)
-  | SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>;
-
-export type TypeResolveFn<TTypes, TParent = {}, TContext = {}> = (
-  parent: TParent,
-  context: TContext,
-  info: GraphQLResolveInfo
-) => Maybe<TTypes> | Promise<Maybe<TTypes>>;
-
-export type IsTypeOfResolverFn<T = {}, TContext = {}> = (obj: T, context: TContext, info: GraphQLResolveInfo) => boolean | Promise<boolean>;
-
-export type NextResolverFn<T> = () => Promise<T>;
-
-export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs = {}> = (
-  next: NextResolverFn<TResult>,
-  parent: TParent,
-  args: TArgs,
-  context: TContext,
-  info: GraphQLResolveInfo
-) => TResult | Promise<TResult>;
-
-
-
-/** Mapping between all available schema types and the resolvers types */
-export type ResolversTypes = {
-  Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
-  Card: ResolverTypeWrapper<Card>;
-  CardInput: CardInput;
-  ID: ResolverTypeWrapper<Scalars['ID']['output']>;
-  Int: ResolverTypeWrapper<Scalars['Int']['output']>;
-  Mutation: ResolverTypeWrapper<{}>;
-  Player: ResolverTypeWrapper<Player>;
-  PlayerInput: PlayerInput;
-  PlayerRole: PlayerRole;
-  PokerGame: ResolverTypeWrapper<PokerGame>;
-  Query: ResolverTypeWrapper<{}>;
-  Round: ResolverTypeWrapper<Round>;
-  String: ResolverTypeWrapper<Scalars['String']['output']>;
-  Turn: ResolverTypeWrapper<Turn>;
-};
-
-/** Mapping between all available schema types and the resolvers parents */
-export type ResolversParentTypes = {
-  Boolean: Scalars['Boolean']['output'];
-  Card: Card;
-  CardInput: CardInput;
-  ID: Scalars['ID']['output'];
-  Int: Scalars['Int']['output'];
-  Mutation: {};
-  Player: Player;
-  PlayerInput: PlayerInput;
-  PokerGame: PokerGame;
-  Query: {};
-  Round: Round;
-  String: Scalars['String']['output'];
-  Turn: Turn;
-};
-
-export type CardResolvers<ContextType = any, ParentType extends ResolversParentTypes['Card'] = ResolversParentTypes['Card']> = {
-  code?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  image?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  suit?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  value?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-};
-
-export type MutationResolvers<ContextType = any, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
-  drawCards?: Resolver<Array<ResolversTypes['Card']>, ParentType, ContextType, RequireFields<MutationDrawCardsArgs, 'count'>>;
-  newGame?: Resolver<ResolversTypes['PokerGame'], ParentType, ContextType, RequireFields<MutationNewGameArgs, 'players'>>;
-};
-
-export type PlayerResolvers<ContextType = any, ParentType extends ResolversParentTypes['Player'] = ResolversParentTypes['Player']> = {
-  bet?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
-  hand?: Resolver<Array<ResolversTypes['Card']>, ParentType, ContextType>;
-  hasTurn?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>;
-  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
-  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  role?: Resolver<Maybe<ResolversTypes['PlayerRole']>, ParentType, ContextType>;
-  wallet?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-};
-
-export type PokerGameResolvers<ContextType = any, ParentType extends ResolversParentTypes['PokerGame'] = ResolversParentTypes['PokerGame']> = {
-  bigBlind?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  bustedPlayers?: Resolver<Array<ResolversTypes['Player']>, ParentType, ContextType>;
-  currentRound?: Resolver<Maybe<ResolversTypes['Round']>, ParentType, ContextType>;
-  players?: Resolver<Array<ResolversTypes['Player']>, ParentType, ContextType>;
-  pot?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-};
-
-export type QueryResolvers<ContextType = any, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
-  newDeck?: Resolver<Array<ResolversTypes['Card']>, ParentType, ContextType>;
-};
-
-export type RoundResolvers<ContextType = any, ParentType extends ResolversParentTypes['Round'] = ResolversParentTypes['Round']> = {
-  bigBlind?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  communityCards?: Resolver<Array<ResolversTypes['Card']>, ParentType, ContextType>;
-  players?: Resolver<Array<ResolversTypes['Player']>, ParentType, ContextType>;
-  pot?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  turn?: Resolver<Maybe<ResolversTypes['Turn']>, ParentType, ContextType>;
-  winners?: Resolver<Maybe<Array<ResolversTypes['Player']>>, ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-};
-
-export type TurnResolvers<ContextType = any, ParentType extends ResolversParentTypes['Turn'] = ResolversParentTypes['Turn']> = {
-  bet?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
-  player?: Resolver<ResolversTypes['Player'], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-};
-
-export type Resolvers<ContextType = any> = {
-  Card?: CardResolvers<ContextType>;
-  Mutation?: MutationResolvers<ContextType>;
-  Player?: PlayerResolvers<ContextType>;
-  PokerGame?: PokerGameResolvers<ContextType>;
-  Query?: QueryResolvers<ContextType>;
-  Round?: RoundResolvers<ContextType>;
-  Turn?: TurnResolvers<ContextType>;
-};
-
+useNewGameMutation.getKey = () => ['NewGame'];

@@ -16,7 +16,7 @@
     id: ID!
     name: String!
     hand: [Card!]!
-    role: PlayerRole!
+    role: PlayerRole
     bet: Int
     wallet: Int!
     hasTurn: Boolean
@@ -55,8 +55,8 @@
   input PlayerInput {
     id: ID!
     name: String!
-    hand: [Card!]!
-    role: PlayerRole!
+    hand: [CardInput!]!
+    role: PlayerRole
     bet: Int
     wallet: Int!
     hasTurn: Boolean

@@ -26,6 +26,7 @@ export default class Round extends Deck {
         if(bigBlind) this.bigBlind = bigBlind;
         this.initDeck();
         this.shuffle();
+        this.drawCommunityCards(3);
         this.turn = this.assignTurn(this.getNextPlayer());
     }
 

@@ -1,43 +1,36 @@
-import { v4 as uuidv4 } from 'uuid';
+'use client'
 
-const players = [
-  { id: uuidv4(), name: 'Alice', cards: [], wallet: 0 },
-  { id: uuidv4(), name: 'Bob', cards: [], wallet: 0 },
-  { id: uuidv4(), name: 'Charlie', cards: [], wallet: 0 },
-  { id: uuidv4(), name: 'Diana', cards: [], wallet: 0 },
+import { PlayerInput } from '@/types/generated/graphql';
+import { v4 as uuidv4 } from 'uuid';
+import usePokerGame from '@/hooks/usePokerGame';
+import { notFound } from 'next/navigation';
+import { DEFAULT_BIG_BLIND } from '@/lib/poker-game';
+
+const players: PlayerInput[] = [
+  { id: uuidv4(), name: 'Alice', hand: [], wallet: 0 },
+  { id: uuidv4(), name: 'Bob', hand: [], wallet: 0 },
+  { id: uuidv4(), name: 'Charlie', hand: [], wallet: 0 },
+  { id: uuidv4(), name: 'Diana', hand: [], wallet: 0 },
 ];
 
-export default async function NewGameComponent() {
-  const res = await fetch('http://localhost:3000/api/graphql', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      query: `
-        mutation NewGame($players: [PlayerInput!]!) {
-          newGame(players: $players) {
-            players { id name wallet }
-            pot
-            bigBlind
-            bustedPlayers { id name wallet }
-            currentRound {
-              players { id name wallet hand { suit value code image } role bet hasTurn }
-              bigBlind
-              pot
-              communityCards { suit value code image }
-              turn { id player { id name } bet }
-              winners { id name wallet }
-            }
-          }
-        }
-      `,
-      variables: { players },
-    }),
-  });
-
-  const { data, errors } = await res.json();
-
-  // Render or use the data as needed
+export default function NewGameComponent() {
+  const pokerGame = usePokerGame();
+  if(!pokerGame) {
+    return notFound();
+  }
+  const { game } = pokerGame;
+  const handleNewGameClick = () => {
+    const { newGame } = pokerGame.actions;
+    const vars = {
+      players,
+      bigBlind: DEFAULT_BIG_BLIND
+    }
+    newGame(vars)
+  }
   return (
-    <pre>{JSON.stringify({ data, errors }, null, 2)}</pre>
+    <div>
+      <button onClick={handleNewGameClick}>Start New Game</button>
+      {game && <pre>{JSON.stringify(game, null, 2)}</pre>}
+    </div>
   );
 }

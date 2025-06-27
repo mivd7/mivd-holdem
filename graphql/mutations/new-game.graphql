@@ -1,0 +1,16 @@
+mutation NewGame($players: [PlayerInput!]!) {
+          newGame(players: $players) {
+            players { id name wallet }
+            pot
+            bigBlind
+            bustedPlayers { id name wallet }
+            currentRound {
+              players { id name wallet hand { suit value code image } role bet hasTurn }
+              bigBlind
+              pot
+              communityCards { suit value code image }
+              turn { id player { id name } bet }
+              winners { id name wallet }
+            }
+          }
+        }
